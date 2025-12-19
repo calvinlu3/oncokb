@@ -7,7 +7,6 @@ on:
 
 jobs:
   check-version-level-and-update:
-    if: github.repository == 'oncokb/oncokb'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -31,6 +30,14 @@ jobs:
           fi
           # Normalize all NEXT_* placeholders to the selected target
           sed -i -E "s/NEXT_(MAJOR|MINOR|PATCH)_VERSION/$TARGET_PLACEHOLDER/g" .github/release-drafter.yml
+          # Reset templates to base placeholder
+          sed -i -E "s/tag-template: 'v\$NEXT_(MAJOR|MINOR|PATCH)_VERSION(-[^']*)?'/tag-template: 'v\$$TARGET_PLACEHOLDER'/" .github/release-drafter.yml
+          sed -i -E "s/name-template: 'v\$NEXT_(MAJOR|MINOR|PATCH)_VERSION(-[^']*)?'/name-template: 'v\$$TARGET_PLACEHOLDER'/" .github/release-drafter.yml
+          # Append prerelease suffix when present
+          if [ -n "$PRERELEASE_SUFFIX" ]; then
+            sed -i -E "s/tag-template: 'v\$$TARGET_PLACEHOLDER'/tag-template: 'v\$$TARGET_PLACEHOLDER-$PRERELEASE_SUFFIX'/" .github/release-drafter.yml
+            sed -i -E "s/name-template: 'v\$$TARGET_PLACEHOLDER'/name-template: 'v\$$TARGET_PLACEHOLDER-$PRERELEASE_SUFFIX'/" .github/release-drafter.yml
+          fi
 
           CHANGED=$(git diff --name-only HEAD --)
           if [ -n "$CHANGED" ]
@@ -44,7 +51,6 @@ jobs:
 
 
   update-pom:
-    if: github.repository == 'oncokb/oncokb'
     needs: [check-version-level-and-update]
     runs-on: ubuntu-latest
     steps:
@@ -56,7 +62,7 @@ jobs:
         id: previoustag
         uses: "WyriHaximus/github-action-get-previous-tag@master"
         env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          GITHUB_TOKEN: "${{ secrets.TOKEN }}"
 
       - name: 'Get next semantic versions'
         id: semvers
